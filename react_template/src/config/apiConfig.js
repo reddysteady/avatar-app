@@ -5,10 +5,11 @@
 
 export const API_CONFIG = {
   // Facebook/Instagram Graph API configuration
-  FACEBOOK_APP_ID: '123456789012345', // Replace with your actual Facebook App ID
+  FACEBOOK_APP_ID: import.meta.env.VITE_FACEBOOK_APP_ID || '123456789012345',
   
   // Backend API endpoint (if applicable)
-  API_BASE_URL: process.env.NODE_ENV === 'production' 
-    ? 'https://api.yourdomain.com'
-    : 'http://localhost:8000'
+  API_BASE_URL: import.meta.env.VITE_API_BASE_URL || 
+    (import.meta.env.MODE === 'production' 
+      ? 'https://api.yourdomain.com'
+      : 'http://localhost:5000')
 };

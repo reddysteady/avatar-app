@@ -16,11 +16,14 @@ const openaiService = {
    * @param {string} apiKey - The OpenAI API key
    */
   initialize: (apiKey) => {
-    if (!apiKey) {
-      throw new Error('OpenAI API key is required');
+    const key = apiKey || import.meta.env.VITE_OPENAI_API_KEY;
+    if (!key) {
+      console.warn('OpenAI API key is not provided and not found in environment variables');
+      return false;
     }
-    localStorage.setItem('openai_api_key', apiKey);
+    localStorage.setItem('openai_api_key', key);
     console.log('OpenAI service initialized');
+    return true;
   },
 
   /**

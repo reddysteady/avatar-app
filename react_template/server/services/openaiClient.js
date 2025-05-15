@@ -1,5 +1,5 @@
 // server/services/openaiClient.js
-const { OpenAI } = require('openai');
+const { Configuration, OpenAIApi } = require('openai');
 
 /**
  * OpenAI client service for the RAG pipeline
@@ -9,6 +9,7 @@ const openaiClient = {
    * OpenAI client instance
    */
   client: null,
+  config: null,
 
   /**
    * Initialize the OpenAI client with API key
@@ -21,9 +22,10 @@ const openaiClient = {
     }
     
     try {
-      this.client = new OpenAI({
+      this.config = new Configuration({
         apiKey: apiKey
       });
+      this.client = new OpenAIApi(this.config);
       return true;
     } catch (error) {
       console.error('Error initializing OpenAI client:', error);
@@ -51,13 +53,12 @@ const openaiClient = {
     }
 
     try {
-      const response = await this.client.embeddings.create({
+      const response = await this.client.createEmbedding({
         model: model,
-        input: text,
-        encoding_format: 'float'
+        input: text
       });
       
-      return response.data[0].embedding;
+      return response.data.data[0].embedding;
     } catch (error) {
       console.error('Error creating embedding:', error);
       throw error;
@@ -77,7 +78,7 @@ const openaiClient = {
     }
 
     try {
-      const response = await this.client.chat.completions.create({
+      const response = await this.client.createChatCompletion({
         model: model,
         messages: messages,
         temperature: options.temperature || 0.7,
@@ -87,7 +88,7 @@ const openaiClient = {
         presence_penalty: options.presence_penalty || 0,
       });
 
-      return response.choices[0].message.content;
+      return response.data.choices[0].message.content;
     } catch (error) {
       console.error('Error creating chat completion:', error);
       throw error;

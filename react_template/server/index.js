@@ -22,10 +22,11 @@ app.use(cors({
 }));
 
 // Initialize services
-openaiClient.initialize();
+openaiClient.initialize(process.env.OPENAI_API_KEY);
+console.log('OpenAI Client initialization:', process.env.OPENAI_API_KEY ? 'API Key found' : 'API Key missing');
 
-// Initialize Supabase schema if enabled
-if (process.env.SUPABASE_URL && process.env.SUPABASE_KEY) {
+// Initialize Supabase schema if enabled and function exists
+if (process.env.SUPABASE_URL && process.env.SUPABASE_KEY && typeof initializeSupabaseSchema === 'function') {
   initializeSupabaseSchema()
     .then(success => {
       if (success) {
@@ -35,6 +36,8 @@ if (process.env.SUPABASE_URL && process.env.SUPABASE_KEY) {
       }
     })
     .catch(err => console.error('Error initializing Supabase schema:', err));
+} else {
+  console.log('Supabase initialization skipped - missing URL, key, or function');
 }
 
 // API Routes
