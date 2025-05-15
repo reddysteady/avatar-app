@@ -1,0 +1,147 @@
+classDiagram
+    class ContentIngestionService {
+        -youtubeApiClient: YouTubeApiClient
+        -textProcessor: TextProcessor
+        -embeddingService: EmbeddingService
+        -vectorRepository: VectorRepository
+        +ingestYouTubeVideo(videoId: string): Promise~boolean~
+        +ingestYouTubeChannel(channelId: string): Promise~boolean~
+        +processTranscript(transcript: string): Promise~ChunkResult~
+        +scheduleContentRefresh(): void
+    }
+
+    class YouTubeApiClient {
+        -apiKey: string
+        +getTranscript(videoId: string): Promise~string~
+        +getChannelVideos(channelId: string): Promise~VideoMetadata[]~
+        +getVideoMetadata(videoId: string): Promise~VideoMetadata~
+    }
+
+    class TextProcessor {
+        -chunkSize: number
+        -overlapSize: number
+        +chunkText(text: string): TextChunk[]
+        +cleanTranscript(transcript: string): string
+        +normalizeText(text: string): string
+    }
+
+    class EmbeddingService {
+        -openaiClient: OpenAIClient
+        -embeddingModel: string
+        +generateEmbeddings(textChunks: TextChunk[]): Promise~EmbeddedChunk[]~
+        +generateSingleEmbedding(text: string): Promise~number[]~
+        +batchProcess(chunks: TextChunk[], batchSize: number): Promise~EmbeddedChunk[]~
+    }
+
+    class VectorRepository {
+        -supabaseClient: SupabaseClient
+        +storeEmbeddedChunks(chunks: EmbeddedChunk[]): Promise~boolean~
+        +queryEmbeddings(embedding: number[], threshold: number, limit: number): Promise~SimilaritySearchResult[]~
+        +deleteContentBySource(sourceId: string): Promise~boolean~
+        +updateContentMetadata(id: string, metadata: JSON): Promise~boolean~
+    }
+
+    class QueryProcessor {
+        -embeddingService: EmbeddingService
+        -vectorRepository: VectorRepository
+        -contextAssembler: ContextAssembler
+        +processQuery(message: string): Promise~QueryResult~
+        +findRelevantContext(embedding: number[]): Promise~SimilaritySearchResult[]~
+    }
+
+    class ContextAssembler {
+        -maxContextTokens: number
+        +assembleContext(searchResults: SimilaritySearchResult[]): string
+        +formatSourceMetadata(searchResults: SimilaritySearchResult[]): SourceMetadata[]
+        +truncateContext(context: string): string
+    }
+
+    class ResponseGenerator {
+        -openaiClient: OpenAIClient
+        -modelName: string
+        -systemPromptTemplate: string
+        +generateResponse(message: string, context: string, influencerName: string): Promise~AIResponse~
+        +formatResponse(rawResponse: string): string
+        +configureModelParameters(params: ModelParams): void
+    }
+
+    class OpenAIClient {
+        -apiKey: string
+        +createEmbedding(text: string, model: string): Promise~number[]~
+        +createChatCompletion(messages: Message[], model: string, params: ModelParams): Promise~AIResponse~
+    }
+
+    class SupabaseClient {
+        -url: string
+        -key: string
+        +executeQuery(query: string, params: any[]): Promise~any~
+        +connect(): void
+        +disconnect(): void
+    }
+
+    class RagApiController {
+        -queryProcessor: QueryProcessor
+        -responseGenerator: ResponseGenerator
+        -authService: AuthService
+        +queryRag(req: Request, res: Response): Promise~void~
+        +validateRequest(req: Request): boolean
+        +handleError(error: Error, res: Response): void
+    }
+
+    class AuthService {
+        -jwtSecret: string
+        +validateToken(token: string): Promise~AuthResult~
+        +generateToken(userId: string, permissions: string[]): string
+        +applyRateLimit(userId: string): boolean
+    }
+
+    class ContentManager {
+        -contentIngestionService: ContentIngestionService
+        -vectorRepository: VectorRepository
+        +addContent(content: ContentData): Promise~boolean~
+        +removeContent(contentId: string): Promise~boolean~
+        +listContent(influencerId: string): Promise~ContentMetadata[]~
+        +refreshContent(contentId: string): Promise~boolean~
+    }
+
+    class SystemIntegration {
+        -ragApiController: RagApiController
+        -existingMessageProcessor: ExistingMessageProcessor
+        +initialize(): void
+        +setupRoutes(app: Express): void
+        +configureFallbacks(): void
+    }
+
+    class DataTypes {
+        <<interface>>
+        TextChunk
+        EmbeddedChunk
+        SimilaritySearchResult
+        QueryResult
+        AIResponse
+        VideoMetadata
+        SourceMetadata
+        ModelParams
+        Message
+        AuthResult
+        ContentData
+        ContentMetadata
+        ChunkResult
+    }
+
+    ContentIngestionService --> YouTubeApiClient
+    ContentIngestionService --> TextProcessor
+    ContentIngestionService --> EmbeddingService
+    ContentIngestionService --> VectorRepository
+    QueryProcessor --> EmbeddingService
+    QueryProcessor --> VectorRepository
+    QueryProcessor --> ContextAssembler
+    ResponseGenerator --> OpenAIClient
+    VectorRepository --> SupabaseClient
+    EmbeddingService --> OpenAIClient
+    RagApiController --> QueryProcessor
+    RagApiController --> ResponseGenerator
+    RagApiController --> AuthService
+    ContentManager --> ContentIngestionService
+    ContentManager --> VectorRepository
+    SystemIntegration --> RagApiController

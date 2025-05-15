@@ -1,0 +1,82 @@
+sequenceDiagram
+    participant Client as Frontend Client
+    participant API as RAG API Controller
+    participant Auth as Auth Service
+    participant QP as Query Processor
+    participant ES as Embedding Service
+    participant VR as Vector Repository
+    participant CA as Context Assembler
+    participant RG as Response Generator
+    participant OAI as OpenAI Client
+    participant SB as Supabase Client
+
+    %% User Message Flow
+    Client->>API: POST /api/query_rag (message, userId, influencerId)
+    API->>Auth: validateToken(token)
+    Auth-->>API: authResult
+    
+    alt Invalid Authentication
+        API-->>Client: 401 Unauthorized
+    else Valid Authentication
+        API->>Auth: applyRateLimit(userId)
+        Auth-->>API: isAllowed
+        
+        alt Rate Limited
+            API-->>Client: 429 Too Many Requests
+        else Allowed
+            API->>QP: processQuery(message)
+            QP->>ES: generateSingleEmbedding(message)
+            ES->>OAI: createEmbedding(message, "text-embedding-3-small")
+            OAI-->>ES: embedding
+            ES-->>QP: embedding
+            
+            QP->>VR: queryEmbeddings(embedding, threshold, limit)
+            VR->>SB: executeQuery(similaritySearchQuery, [embedding, threshold, limit])
+            SB-->>VR: rawResults
+            VR-->>QP: similaritySearchResults
+            
+            QP->>CA: assembleContext(similaritySearchResults)
+            CA-->>QP: formattedContext
+            QP-->>API: queryResult
+            
+            API->>RG: generateResponse(message, formattedContext, influencerName)
+            RG->>OAI: createChatCompletion(messages, "gpt-4o", params)
+            OAI-->>RG: aiResponse
+            RG->>RG: formatResponse(aiResponse)
+            RG-->>API: formattedResponse
+            
+            API->>CA: formatSourceMetadata(queryResult.searchResults)
+            CA-->>API: sourcesMetadata
+            
+            API-->>Client: 200 OK {response, sources, processingTime}
+        end
+    end
+
+    %% Content Ingestion Flow (separate process)
+    Note over Client,SB: Content Ingestion Flow (separate process)
+    
+    participant CIS as Content Ingestion Service
+    participant YTC as YouTube API Client
+    participant TP as Text Processor
+    
+    Client->>CIS: ingestYouTubeVideo(videoId)
+    CIS->>YTC: getVideoMetadata(videoId)
+    YTC-->>CIS: videoMetadata
+    CIS->>YTC: getTranscript(videoId)
+    YTC-->>CIS: transcript
+    
+    CIS->>TP: cleanTranscript(transcript)
+    TP-->>CIS: cleanedText
+    CIS->>TP: chunkText(cleanedText)
+    TP-->>CIS: textChunks
+    
+    CIS->>ES: generateEmbeddings(textChunks)
+    ES->>OAI: createEmbedding(batchTexts, "text-embedding-3-small")
+    OAI-->>ES: embeddings
+    ES-->>CIS: embeddedChunks
+    
+    CIS->>VR: storeEmbeddedChunks(embeddedChunks)
+    VR->>SB: executeQuery(insertQuery, [chunks])
+    SB-->>VR: insertResult
+    VR-->>CIS: success
+    CIS-->>Client: ingestResult

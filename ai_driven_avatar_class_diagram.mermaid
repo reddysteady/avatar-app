@@ -1,0 +1,225 @@
+classDiagram
+    class User {
+        +string id
+        +string name
+        +string email
+        +string passwordHash
+        +string[] socialAccounts
+        +SubscriptionTier tier
+        +Date createdAt
+        +Date updatedAt
+        +login(email, password) bool
+        +connectSocialAccount(platform, token) bool
+        +updateSubscription(tier) bool
+    }
+
+    class Avatar {
+        +string id
+        +string userId
+        +boolean isActive
+        +ToneSettings toneSettings
+        +ResponseStyle responseStyle
+        +ModerationRules moderationRules
+        +Date lastTrainingDate
+        +boolean isTraining
+        +getStatus() Status
+        +toggleActive(boolean) void
+        +updateSettings(settings) void
+        +generateResponse(message) Promise~Response~
+    }
+
+    class ToneSettings {
+        +string primaryTone
+        +number casualToFormalRatio
+        +number enthusiasmLevel
+        +boolean useEmojis
+        +number responseLength
+        +applyToPrompt(prompt) string
+    }
+
+    class ResponseStyle {
+        +boolean isShortAndDirect
+        +boolean isDetailedAndThorough
+        +boolean isEmojiHeavy
+        +number maxCharacters
+        +string[] forbiddenPhrases
+        +string[] preferredPhrases
+        +formatResponse(text) string
+    }
+
+    class ModerationRules {
+        +boolean blockOffensiveLanguage
+        +boolean routePersonalQuestions
+        +boolean blockPoliticalTopics
+        +string[] customBlockedKeywords
+        +string[] customRoutedKeywords
+        +validateMessage(message) ModerationType
+    }
+
+    class SocialAccount {
+        +string id
+        +string userId
+        +string platform
+        +string accountId
+        +string accountName
+        +string accessToken
+        +string refreshToken
+        +Date tokenExpiryDate
+        +boolean isActive
+        +refreshAccessToken() Promise~boolean~
+        +validateConnection() Promise~boolean~
+        +disconnect() Promise~boolean~
+    }
+
+    class Message {
+        +string id
+        +string userId
+        +string platform
+        +string platformMessageId
+        +string senderName
+        +string senderId
+        +string content
+        +Date timestamp
+        +MessageStatus status
+        +string response
+        +boolean isAutoResponded
+        +boolean isReviewed
+        +Date respondedAt
+        +markAsReviewed(userId) void
+        +addResponse(text, isAuto) void
+    }
+
+    class MessageStatus {
+        <<enumeration>>
+        PENDING
+        AUTO_RESPONDING
+        AWAITING_REVIEW
+        RESPONDED
+        IGNORED
+    }
+
+    class ModerationType {
+        <<enumeration>>
+        APPROVED
+        NEEDS_REVIEW
+        BLOCKED
+    }
+
+    class SubscriptionTier {
+        <<enumeration>>
+        BRONZE
+        SILVER
+        GOLD
+    }
+
+    class TrainingData {
+        +string id
+        +string userId
+        +string platform
+        +string sourceType
+        +string content
+        +Date createdAt
+        +boolean isProcessed
+        +normalize() string
+        +extractKeyPhrases() string[]
+    }
+
+    class TrainingJob {
+        +string id
+        +string userId
+        +Date startedAt
+        +Date completedAt
+        +TrainingJobStatus status
+        +number progress
+        +string[] errors
+        +updateProgress(number) void
+        +complete() void
+        +fail(error) void
+    }
+
+    class TrainingJobStatus {
+        <<enumeration>>
+        QUEUED
+        COLLECTING_DATA
+        PROCESSING
+        TRAINING_MODEL
+        COMPLETED
+        FAILED
+    }
+
+    class AIModel {
+        +string id
+        +string userId
+        +string baseModelId
+        +string finetuneId
+        +Date createdAt
+        +number version
+        +ModelStatus status
+        +generateResponse(prompt, context) Promise~string~
+        +updateModel(newFinetuneId) void
+    }
+
+    class ModelStatus {
+        <<enumeration>>
+        INITIALIZING
+        READY
+        TRAINING
+        ERROR
+    }
+
+    class PlatformConnector {
+        <<interface>>
+        +connect(credentials) Promise~boolean~
+        +fetchMessages(since) Promise~Message[]~
+        +sendResponse(messageId, response) Promise~boolean~
+        +fetchContent(params) Promise~TrainingData[]~
+    }
+
+    class InstagramConnector {
+        +connect(credentials) Promise~boolean~
+        +fetchMessages(since) Promise~Message[]~
+        +sendResponse(messageId, response) Promise~boolean~
+        +fetchContent(params) Promise~TrainingData[]~
+    }
+
+    class YouTubeConnector {
+        +connect(credentials) Promise~boolean~
+        +fetchMessages(since) Promise~Message[]~
+        +sendResponse(messageId, response) Promise~boolean~
+        +fetchContent(params) Promise~TrainingData[]~
+    }
+
+    class AnalyticsService {
+        +getMessageMetrics(userId, timeframe) Promise~MessageMetrics~
+        +getResponseMetrics(userId, timeframe) Promise~ResponseMetrics~
+        +getPlatformBreakdown(userId) Promise~PlatformBreakdown~
+        +getMessageCategories(userId) Promise~CategoryBreakdown~
+        +generateReport(userId, params) Promise~Report~
+    }
+
+    class ResponseQualityService {
+        +evaluateResponse(original, response) number
+        +trackUserCorrections(messageId, originalResponse, correctedResponse) void
+        +getResponseQualityTrend(userId, timeframe) Promise~QualityTrend~
+    }
+
+    class SubscriptionService {
+        +createSubscription(userId, tier) Promise~Subscription~
+        +updateSubscription(userId, tier) Promise~Subscription~
+        +cancelSubscription(userId) Promise~boolean~
+        +processPayment(userId) Promise~boolean~
+        +checkUsageLimits(userId) Promise~UsageLimits~
+    }
+
+    User "1" -- "1..n" SocialAccount : has
+    User "1" -- "1" Avatar : owns
+    User "1" -- "1" AIModel : has
+    Avatar "1" -- "1" ToneSettings : contains
+    Avatar "1" -- "1" ResponseStyle : contains
+    Avatar "1" -- "1" ModerationRules : contains
+    User "1" -- "1..n" Message : receives
+    User "1" -- "1..n" TrainingData : provides
+    User "1" -- "1..n" TrainingJob : initiates
+    PlatformConnector <|-- InstagramConnector : implements
+    PlatformConnector <|-- YouTubeConnector : implements
+    SocialAccount -- PlatformConnector : uses

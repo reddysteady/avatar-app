@@ -1,0 +1,102 @@
+sequenceDiagram
+    participant Client as Influencer Client
+    participant API as API Gateway
+    participant US as User Service
+    participant AS as Avatar Service
+    participant TS as Training Service
+    participant AI as AI Engine
+    participant SC as Social Connectors
+    participant AN as Analytics Service
+    participant DB as Database
+    participant EXT as External APIs
+
+    %% User Onboarding and Authentication
+    Client->>API: Register/Login
+    API->>US: Process Authentication
+    US->>DB: Store/Validate User Credentials
+    DB-->>US: Return User Data
+    US-->>API: Authentication Success/Failure
+    API-->>Client: Authentication Response
+
+    %% Social Media Connection
+    Client->>API: Connect Social Media Account
+    API->>US: Initiate OAuth Process
+    US->>EXT: Request Authorization
+    EXT-->>Client: OAuth Consent Screen
+    Client->>EXT: Grant Permissions
+    EXT-->>US: Return Access Tokens
+    US->>DB: Store Account & Tokens
+    US-->>API: Connection Status
+    API-->>Client: Platform Connected
+
+    %% Avatar Training
+    Client->>API: Request Avatar Training
+    API->>TS: Initialize Training Job
+    TS->>DB: Create Training Job Record
+    TS->>SC: Request Content from Platforms
+    SC->>EXT: Fetch Posts, Comments, Videos
+    EXT-->>SC: Return Content
+    SC-->>TS: Deliver Raw Training Data
+    TS->>DB: Save Training Data
+    TS->>AI: Process & Analyze Content
+    AI->>AI: Extract Style Patterns
+    AI->>EXT: Fine-tune LLM with OpenAI API
+    EXT-->>AI: Return Fine-tuned Model ID
+    AI->>DB: Update AI Model Record
+    AI-->>TS: Training Complete
+    TS->>DB: Update Training Job Status
+    TS-->>API: Training Status Update
+    API-->>Client: Avatar Ready Notification
+
+    %% Message Processing
+    SC->>EXT: Poll for New Messages
+    EXT-->>SC: Return New Messages
+    SC->>AS: Submit Messages for Processing
+    AS->>DB: Store Incoming Messages
+    AS->>AS: Apply Moderation Rules
+    AS->>AI: Generate Response
+    AI->>AI: Create Context from History
+    AI->>EXT: Request LLM Response
+    EXT-->>AI: Return Generated Text
+    AI-->>AS: Deliver Formatted Response
+    AS->>AS: Apply Style & Tone Settings
+    
+    %% Response Handling
+    alt Automatic Response
+        AS->>SC: Send Auto-Response
+        SC->>EXT: Post Response to Platform
+        EXT-->>SC: Confirm Delivery
+        SC-->>AS: Update Status
+        AS->>DB: Mark as Auto-Responded
+    else Needs Review
+        AS->>DB: Queue for Review
+        AS-->>API: Notification for Review
+        API-->>Client: Alert for Message Review
+        Client->>API: Review & Approve/Edit/Reject
+        API->>AS: Process Review Decision
+        alt Approved/Edited
+            AS->>SC: Send Approved Response
+            SC->>EXT: Post Response to Platform
+            EXT-->>SC: Confirm Delivery
+            SC-->>AS: Update Status
+            AS->>DB: Mark as Manually Approved
+        else Rejected
+            AS->>DB: Mark as Rejected
+        end
+    end
+    
+    %% Analytics Processing
+    Client->>API: Request Analytics
+    API->>AN: Fetch Analytics Data
+    AN->>DB: Query Interaction Metrics
+    DB-->>AN: Return Raw Analytics Data
+    AN->>AN: Process & Aggregate Data
+    AN-->>API: Deliver Formatted Analytics
+    API-->>Client: Display Analytics Dashboard
+    
+    %% Avatar Settings Update
+    Client->>API: Update Avatar Settings
+    API->>AS: Apply New Settings
+    AS->>DB: Save Configuration
+    AS-->>API: Settings Updated
+    API-->>Client: Confirm Settings Change

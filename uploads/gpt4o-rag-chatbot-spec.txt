@@ -1,0 +1,69 @@
+// MGX + GPT-4o + RAG Chatbot Scaffold
+
+// === FRONTEND: MGX Agent (chat-agent.json) ===
+
+{
+  "name": "Influencer Chatbot",
+  "description": "An avatar trained on influencer content that chats with fans",
+  "inputs": ["user_input"],
+  "outputs": ["response"],
+  "steps": [
+    {
+      "name": "Send to backend",
+      "type": "api_call",
+      "method": "POST",
+      "url": "https://your-backend-api.com/query_rag",
+      "payload": {
+        "message": "{{user_input}}"
+      },
+      "response_key": "response",
+      "assign_to": "response"
+    }
+  ]
+}
+
+// === BACKEND: query_rag.js ===
+
+import { createClient } from '@supabase/supabase-js';
+import { OpenAI } from 'openai';
+
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+export async function handleQuery(userMessage) {
+  const { data: embedding } = await openai.embeddings.create({
+    model: 'text-embedding-3-small',
+    input: userMessage,
+  });
+
+  const { data: matches } = await supabase.rpc('match_embeddings', {
+    query_embedding: embedding.data[0].embedding,
+    match_threshold: 0.75,
+    match_count: 5
+  });
+
+  const context = matches.map(m => m.content).join('\n');
+
+  const chatCompletion = await openai.chat.completions.create({
+    model: 'gpt-4o',
+    messages: [
+      {
+        role: 'system',
+        content: 'You are a helpful and energetic influencer. Speak with the same tone and personality as in the context provided.'
+      },
+      {
+        role: 'user',
+        content: `Context:\n${context}\n\nUser: ${userMessage}`
+      }
+    ]
+  });
+
+  return chatCompletion.choices[0].message.content;
+}
+
+// === NOTES ===
+// 1. Collect influencer content (e.g., transcripts) and chunk into ~300-word blocks.
+// 2. Use OpenAI's embedding API to vectorize each chunk.
+// 3. Store chunks + vectors in Supabase (with pgvector & RPC match_embeddings).
+// 4. Deploy this backend (e.g., Vercel/Fly.io).
+// 5. MGX agent sends user messages to this backend for GPT-4o responses.
