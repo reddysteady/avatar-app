@@ -1,5 +1,7 @@
 # Avatar App
 
+[![CI](https://github.com/reddysteady/avatar-app/actions/workflows/ci.yml/badge.svg)](https://github.com/reddysteady/avatar-app/actions/workflows/ci.yml)
+
 Backend for an AI-driven avatar application.
 
 ## Running locally
