@@ -1,0 +1,16 @@
+{
+  "name": "avatar-app",
+  "version": "1.0.0",
+  "description": "Backend for avatar application",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "test": "echo \"(no tests yet)\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.1.0"
+  }
+}
